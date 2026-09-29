@@ -1,0 +1,61 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Current state
+
+Step 1 (土台) of the design doc's 作業ステップ is implemented: Vite + React 18 scaffold, the 「よる」 theme, the `Chiribo` component, the dialogue dictionary, and the Home screen. State is in memory only; Dexie comes in step 4. The 「部屋をパシャる」 button is a placeholder until step 2. Cloudflare Pages deploy and Access are not set up yet.
+
+- `おそうじクエスト 最小構成 設計書（個人検証用）.md`: the design doc. It is the source of truth for scope, stack, data model, API contract and game rules. Read it before implementing anything.
+- `おそうじクエスト.html`: the original prototype (~8MB self-unpacking bundle). Don't read it directly. The screen markup and the logic class are in the gzip+base64 `__bundler/template` and `__bundler/manifest` script blocks. Decode them to a scratch file and strip the `@font-face` and data-URI noise before reading. Screen layouts (padding, borders, shadows, font sizes) should match the prototype's inline styles.
+
+The app is a personal-use PWA: photograph a room → Claude suggests 1-minute cleanup tasks → do them → compare before/after. Success criteria after 2 weeks: opened on ≥5 days, and tasks actually fit in ~1 minute.
+
+## Planned stack and commands
+
+TypeScript, React 18 + Vite, vite-plugin-pwa, Dexie (IndexedDB), plain CSS with CSS variables, deployed on Cloudflare Pages with one Pages Function. Cloudflare Access restricts the whole site to the owner's email.
+
+- Dev server: `npm run dev` (port 5173)
+- Build (includes type check via `tsc -b`): `npm run build` (output `dist`)
+- Lint: `npm run lint` (oxlint)
+- No test runner is set up yet
+- Once `functions/` exists, run frontend + function locally with `npx wrangler pages dev -- npm run dev`
+- `dexie` (step 4) and `vite-plugin-pwa` (step 5) are not installed yet
+- Testing on a real phone needs HTTPS (camera input and PWA), so use a Pages preview deploy
+
+## Architecture (as designed)
+
+```
+functions/api/analyze.ts   # only server code: proxies to Claude, stores nothing
+shared/types.ts            # Task, Session, etc., shared by frontend and function
+src/App.tsx                # no router; a `screen` state switches screens (same as prototype)
+src/screens/               # Home, Camera, Scan, Tasks, Focus, Done, Compare, History, Settings
+src/components/Chiribo.tsx # mascot, ported from prototype bot()
+src/lib/db.ts              # Dexie schema
+src/lib/game.ts            # EXP, level, streak, logical day
+src/lib/image.ts           # resize + base64
+src/styles/theme.css       # 「よる」 palette
+src/lib/lines.ts           # チリボ dialogue [ふんわり, げんき], ported from prototype L()
+```
+
+**Theming.** All colors are CSS variables in `theme.css` (`--bg`, `--paper`, `--ink`, `--pink`, `--mint`, `--lav`, `--butter`, …). `Chiribo` and the screens reference `var(--…)` rather than a palette object, so switching palettes later only means swapping variables. Text on colored buttons uses `--on-color`, which stays dark in every palette.
+
+**Server boundary.** The function exists only to hide `ANTHROPIC_API_KEY` (a Pages Secret). `POST /api/analyze` takes `{ image: base64 JPEG, count: 1–5, voice: 'ふんわり'|'げんき' }` and returns `{ tasks, line }` or `{ error: 'too_large'|'ai_failed' }`. It uses `claude-haiku-4-5` with a single `report_tasks` tool, forced via `tool_choice` so the JSON shape is fixed. Limits: reject images over 1.5MB, `max_tokens` 800, 20s timeout. Never `console.log` images or request bodies. The full tool schema and system prompt rules are in the design doc.
+
+**Client does all the game logic.** Re-validate the AI JSON on the client (count, text length, 0–1 coordinates), then assign task `id`s. The AI never decides EXP. On API failure or offline, fall back to 5 fixed tasks shown without pins.
+
+**Images.** Resize to a 1024px long edge JPEG via Canvas (`createImageBitmap` → `toBlob`). Redrawing also strips EXIF location data. Only the before photo is analyzed; the after photo stays on the device for comparison.
+
+**Data (IndexedDB only, nothing server-side).** There are 4 stores: `profile` and `settings` (single row with key `'me'`), `sessions` (indexed by `day`) and `photos` (indexed by `createdAt`). Photos are kept apart from sessions so they can expire (7d/30d/forever) while the session records remain. On expiry, delete the photo and clear the session's photo reference. Backup is manual JSON export without photos. Call `navigator.storage.persist()` on startup.
+
+## Game rules (must match prototype)
+
+- EXP: 1-minute task = 10, 2-minute task = 15. Level up every 100 EXP, carrying over the remainder.
+- Logical day rolls over at 04:00, so 0:00–3:59 counts as the previous day. `day` is `'YYYY-MM-DD'`.
+- Streak: a day counts if at least one task was done, 「今日はサボる」 was pressed, or it is a rest weekday. `countToday` runs on completion or skip, at most once per day. `catchUp` runs on app open and fills the days from `lastCountedDay` to yesterday: rest weekdays increment the streak, and any other empty day resets it to 0. Reference code is in the design doc.
+- Focus timer: a 60s ring that does not stop the task at 0 (「時間切れでもいいよ」).
+- The Scan screen advances when the API responds, not after the prototype's fixed 3.4s.
+
+## Out of scope
+
+No login, device migration, push notifications, app store release, analytics, or onboarding screen. Settings are limited to rest weekdays, missions per day, voice, photo retention and export.

@@ -1,0 +1,153 @@
+/* 配色「よる」: プロトタイプの PALS '3e' をそのまま移植 */
+:root {
+  --bg: #1e1c29;
+  --paper: #2b2839;
+  --ink: #0f0e16;
+  --sub: #a7a2b8;
+  --text: #f1eefa;
+  --pink: oklch(0.78 0.11 350);
+  --mint: oklch(0.8 0.1 180);
+  --lav: oklch(0.72 0.09 290);
+  --butter: oklch(0.86 0.1 95);
+  --cheek: oklch(0.72 0.12 350);
+  --glow: #d9fff6;
+  /* 色つきボタンの上の文字（どの配色でも濃い色） */
+  --on-color: #2a2833;
+  --bg-focus: color-mix(in oklch, var(--mint) 14%, var(--bg));
+  --bg-done: color-mix(in oklch, var(--butter) 14%, var(--bg));
+  --stripe: repeating-linear-gradient(135deg, #34304a 0 12px, #2e2b40 12px 24px);
+  --dots: radial-gradient(rgba(42, 40, 51, 0.08) 1.2px, transparent 1.2px);
+
+  --font-dot: 'DotGothic16', monospace;
+  --font-body: 'M PLUS 1p', system-ui, sans-serif;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+button { font-family: inherit; color: inherit; cursor: pointer; }
+
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes scanline { 0% { top: 0; } 50% { top: calc(100% - 4px); } 100% { top: 0; } }
+@keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+
+/* 画面の器。スマホ幅で全画面、PCでは中央に寄せる */
+.screen {
+  position: relative;
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 28px);
+  background-color: var(--bg);
+  background-image: var(--dots);
+  background-size: 18px 18px;
+  overflow: hidden;
+}
+
+.title { font-family: var(--font-dot); font-size: 18px; white-space: nowrap; }
+
+.chip {
+  padding: 5px 9px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  font: 400 13px var(--font-dot);
+  color: var(--on-color);
+}
+
+.xpbar { display: flex; align-items: center; gap: 10px; font: 400 11px var(--font-dot); color: var(--sub); }
+.xpbar-track {
+  flex: 1;
+  height: 12px;
+  padding: 1px;
+  box-sizing: content-box;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+}
+.xpbar-fill { height: 100%; background: var(--mint); transition: width 0.6s; }
+
+.bubble {
+  position: relative;
+  max-width: 290px;
+  padding: 14px 16px;
+  border: 2.5px solid var(--ink);
+  border-radius: 10px;
+  background: var(--paper);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 15px;
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+.bubble-name {
+  position: absolute;
+  top: -11px;
+  left: 12px;
+  padding: 1px 8px;
+  border-radius: 3px;
+  background: var(--ink);
+  color: #fffdf7;
+  font: 400 11px var(--font-dot);
+}
+
+/* ドット風の押し込みボタン */
+.btn {
+  border: 2.5px solid var(--ink);
+  border-radius: 10px;
+  background: var(--paper);
+  font: 700 14px var(--font-body);
+  color: var(--text);
+}
+.btn-primary {
+  background: var(--pink);
+  box-shadow: 4px 4px 0 var(--ink);
+  font: 400 22px var(--font-dot);
+  color: var(--on-color);
+}
+.btn-primary:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+
+.link {
+  border: 0;
+  background: none;
+  padding: 10px;
+  font: 500 13px var(--font-body);
+  color: var(--sub);
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(42, 40, 51, 0.45);
+}
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  padding: 24px 22px calc(env(safe-area-inset-bottom) + 30px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg);
+  border-top: 2.5px solid var(--ink);
+  border-radius: 18px 18px 0 0;
+  animation: pop 0.3s;
+}
