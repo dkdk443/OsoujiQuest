@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Step 1 (土台) of the design doc's 作業ステップ is implemented: Vite + React 18 scaffold, the 「よる」 theme, the `Chiribo` component, the dialogue dictionary, and the Home screen. State is in memory only; Dexie comes in step 4. The 「部屋をパシャる」 button is a placeholder until step 2. Cloudflare Pages deploy and Access are not set up yet.
+Steps 1 (土台) and 2 (撮影と解析) of the design doc's 作業ステップ are implemented: Home → Camera → Scan → Tasks, plus `/api/analyze`. State is in memory only; Dexie comes in step 4. Tapping a task is a placeholder until step 3. Cloudflare Pages deploy and Access are not set up yet.
 
 - `おそうじクエスト 最小構成 設計書（個人検証用）.md`: the design doc. It is the source of truth for scope, stack, data model, API contract and game rules. Read it before implementing anything.
 - `おそうじクエスト.html`: the original prototype (~8MB self-unpacking bundle). Don't read it directly. The screen markup and the logic class are in the gzip+base64 `__bundler/template` and `__bundler/manifest` script blocks. Decode them to a scratch file and strip the `@font-face` and data-URI noise before reading. Screen layouts (padding, borders, shadows, font sizes) should match the prototype's inline styles.
@@ -15,11 +15,11 @@ The app is a personal-use PWA: photograph a room → Claude suggests 1-minute cl
 
 TypeScript, React 18 + Vite, vite-plugin-pwa, Dexie (IndexedDB), plain CSS with CSS variables, deployed on Cloudflare Pages with one Pages Function. Cloudflare Access restricts the whole site to the owner's email.
 
-- Dev server: `npm run dev` (port 5173)
-- Build (includes type check via `tsc -b`): `npm run build` (output `dist`)
+- Frontend dev server: `npm run dev` (Vite, port 5173). It proxies `/api/*` to port 8788
+- Functions dev server: `npm run dev:api` (`wrangler pages dev`, port 8788). It reads `ANTHROPIC_API_KEY` from `.dev.vars` (copy `.dev.vars.example`). Without a key, `/api/analyze` returns `ai_failed` and the app falls back to the fixed tasks. The design doc's `wrangler pages dev -- npm run dev` proxy form is deprecated, so don't use it
+- Build (type-checks src, shared, and functions via `tsc -b`): `npm run build` (output `dist`)
 - Lint: `npm run lint` (oxlint)
 - No test runner is set up yet
-- Once `functions/` exists, run frontend + function locally with `npx wrangler pages dev -- npm run dev`
 - `dexie` (step 4) and `vite-plugin-pwa` (step 5) are not installed yet
 - Testing on a real phone needs HTTPS (camera input and PWA), so use a Pages preview deploy
 
@@ -36,7 +36,11 @@ src/lib/game.ts            # EXP, level, streak, logical day
 src/lib/image.ts           # resize + base64
 src/styles/theme.css       # 「よる」 palette
 src/lib/lines.ts           # チリボ dialogue [ふんわり, げんき], ported from prototype L()
+src/lib/tasks.ts           # calls /api/analyze, re-validates AI output, fallback tasks
+functions/tsconfig.json    # separate tsconfig with Workers types; functions can't use DOM types
 ```
+
+**Pins and photo aspect.** Task `x`/`y` are 0–1 relative to the whole photo, so the Tasks screen shows the photo at its real aspect ratio (no `object-fit: cover` cropping), using the width and height returned by `resizePhoto`. Pin centers are clamped inside the frame.
 
 **Theming.** All colors are CSS variables in `theme.css` (`--bg`, `--paper`, `--ink`, `--pink`, `--mint`, `--lav`, `--butter`, …). `Chiribo` and the screens reference `var(--…)` rather than a palette object, so switching palettes later only means swapping variables. Text on colored buttons uses `--on-color`, which stays dark in every palette.
 

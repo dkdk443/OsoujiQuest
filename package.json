@@ -5,21 +5,25 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "wrangler pages dev --port 8788",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.129.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260929.1",
     "@types/node": "^24.19.0",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.86.0",
     "typescript": "~6.0.2",
-    "vite": "^8.3.1"
+    "vite": "^8.3.1",
+    "wrangler": "^4.143.0"
   }
 }

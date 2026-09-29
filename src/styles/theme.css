@@ -151,3 +151,23 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   border-radius: 18px 18px 0 0;
   animation: pop 0.3s;
 }
+
+.back {
+  border: 0;
+  background: none;
+  padding: 8px 0;
+  font: 500 14px var(--font-body);
+  white-space: nowrap;
+}
+
+/* 撮影した写真の枠 */
+.photo {
+  position: relative;
+  flex: none;
+  border: 2.5px solid var(--ink);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 4px 4px 0 var(--ink);
+  background: var(--stripe);
+}
+.photo > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }

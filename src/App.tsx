@@ -1,18 +1,55 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Profile, Voice } from '../shared/types';
+import { resizePhoto, type Photo } from './lib/image';
+import { analyzePhoto, type Quest } from './lib/tasks';
+import { Camera } from './screens/Camera';
 import { Home } from './screens/Home';
+import { Scan } from './screens/Scan';
+import { Tasks } from './screens/Tasks';
 
 // ルーターは使わず、プロトタイプと同じく screen 状態で画面を切り替える。
-// ステップ2以降で 'cam' | 'scan' | 'tasks' | 'focus' | 'done' | 'compare' | 'history' | 'settings' を足す
-type Screen = 'home';
+// ステップ3以降で 'focus' | 'done' | 'compare' | 'history' | 'settings' を足す
+type Screen = 'home' | 'cam' | 'scan' | 'tasks';
+
+// ステップ5で設定画面の「1日のミッション数」に置き換える
+const MISSION_COUNT = 5;
 
 export default function App() {
-  const [screen] = useState<Screen>('home');
+  const [screen, setScreen] = useState<Screen>('home');
   // ステップ4で Dexie（IndexedDB）に保存するまでは、メモリ上だけで持つ
   const [profile] = useState<Profile>({ xp: 0, level: 1, streak: 0, lastCountedDay: null });
   const [voice] = useState<Voice>('ふんわり');
   const [oneMode, setOneMode] = useState(true);
   const [restToday, setRestToday] = useState(false);
+
+  const [photo, setPhoto] = useState<Photo | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [quest, setQuest] = useState<Quest | null>(null);
+  const [doneIds] = useState<string[]>([]);
+  const [showAll, setShowAll] = useState(false);
+
+  // 写真を差し替えたら古い object URL を解放する
+  useEffect(() => () => { if (photoUrl) URL.revokeObjectURL(photoUrl); }, [photoUrl]);
+
+  const onPick = async (file: File) => {
+    let p: Photo;
+    try {
+      p = await resizePhoto(file);
+    } catch {
+      alert('写真を読みこめなかったよ。もう一回撮ってみて');
+      return;
+    }
+    setPhoto(p);
+    setPhotoUrl(URL.createObjectURL(p.blob));
+    setQuest(null);
+    setScreen('scan');
+    setQuest(await analyzePhoto(p.blob, MISSION_COUNT, voice));
+  };
+
+  const toTasks = useCallback(() => {
+    setShowAll(!oneMode);
+    setScreen('tasks');
+  }, [oneMode]);
 
   switch (screen) {
     case 'home':
@@ -23,8 +60,26 @@ export default function App() {
           restToday={restToday}
           oneMode={oneMode}
           onToggleOneMode={() => setOneMode(v => !v)}
-          onShoot={() => alert('カメラはステップ2でつくるよ')}
+          onShoot={() => setScreen('cam')}
           onRest={() => setRestToday(true)}
+        />
+      );
+    case 'cam':
+      return <Camera voice={voice} onPick={onPick} onCancel={() => setScreen('home')} />;
+    case 'scan':
+      return <Scan photoUrl={photoUrl!} done={quest !== null} onFinish={toTasks} />;
+    case 'tasks':
+      return (
+        <Tasks
+          quest={quest!}
+          photo={photo!}
+          photoUrl={photoUrl!}
+          voice={voice}
+          doneIds={doneIds}
+          showAll={showAll}
+          onShowAll={setShowAll}
+          onStart={() => alert('1分タイマーはステップ3でつくるよ')}
+          onHome={() => setScreen('home')}
         />
       );
   }
