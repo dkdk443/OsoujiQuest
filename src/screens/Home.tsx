@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Profile, Voice } from '../../shared/types';
 import { Chiribo } from '../components/Chiribo';
+import { TAB_SPACE } from '../components/TabBar';
 import { XpBar } from '../components/XpBar';
 import { line } from '../lib/lines';
 
@@ -8,17 +9,18 @@ type Props = {
   profile: Profile;
   voice: Voice;
   restToday: boolean;
+  canSkip: boolean; // 今日まだ何も数えていないときだけ「今日はサボる」を出す
   oneMode: boolean;
   onToggleOneMode: () => void;
   onShoot: () => void;
   onRest: () => void;
 };
 
-export function Home({ profile, voice, restToday, oneMode, onToggleOneMode, onShoot, onRest }: Props) {
+export function Home({ profile, voice, restToday, canSkip, oneMode, onToggleOneMode, onShoot, onRest }: Props) {
   const [skipOpen, setSkipOpen] = useState(false);
 
   return (
-    <div className="screen">
+    <div className="screen" style={{ paddingBottom: TAB_SPACE }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="title">おそうじクエスト</div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -73,7 +75,7 @@ export function Home({ profile, voice, restToday, oneMode, onToggleOneMode, onSh
           部屋をパシャる
         </button>
 
-        {!restToday && (
+        {canSkip && (
           <button className="link" style={{ alignSelf: 'center' }} onClick={() => setSkipOpen(true)}>
             今日はサボる
           </button>

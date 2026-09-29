@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Steps 1–3 of the design doc's 作業ステップ are implemented: Home → Camera → Scan → Tasks → Focus (1-minute timer) → Done, plus `/api/analyze` and EXP/levels. State is in memory only; Dexie, streaks and History come in step 4. The Done screen has no 「アフターを撮って比べる」 button yet (step 5). Cloudflare Pages deploy and Access are not set up yet.
+Steps 1–4 of the design doc's 作業ステップ are implemented: Home → Camera → Scan → Tasks → Focus (1-minute timer) → Done, History, `/api/analyze`, EXP/levels, streaks, and Dexie persistence. Step 5 (after photo + compare, photo expiry, Settings screen, export, PWA) is not done. Settings are stored but use defaults since there is no Settings UI yet. Cloudflare Pages deploy and Access are not set up yet.
 
 - `おそうじクエスト 最小構成 設計書（個人検証用）.md`: the design doc. It is the source of truth for scope, stack, data model, API contract and game rules. Read it before implementing anything.
 - `おそうじクエスト.html`: the original prototype (~8MB self-unpacking bundle). Don't read it directly. The screen markup and the logic class are in the gzip+base64 `__bundler/template` and `__bundler/manifest` script blocks. Decode them to a scratch file and strip the `@font-face` and data-URI noise before reading. Screen layouts (padding, borders, shadows, font sizes) should match the prototype's inline styles.
@@ -20,7 +20,7 @@ TypeScript, React 18 + Vite, vite-plugin-pwa, Dexie (IndexedDB), plain CSS with 
 - Build (type-checks src, shared, and functions via `tsc -b`): `npm run build` (output `dist`)
 - Lint: `npm run lint` (oxlint)
 - No test runner is set up yet
-- `dexie` (step 4) and `vite-plugin-pwa` (step 5) are not installed yet
+- `vite-plugin-pwa` (step 5) is not installed yet
 - Testing on a real phone needs HTTPS (camera input and PWA), so use a Pages preview deploy
 
 ## Architecture (as designed)
@@ -39,6 +39,8 @@ src/lib/lines.ts           # チリボ dialogue [ふんわり, げんき], porte
 src/lib/tasks.ts           # calls /api/analyze, re-validates AI output, fallback tasks
 functions/tsconfig.json    # separate tsconfig with Workers types; functions can't use DOM types
 ```
+
+**Persistence flow.** `App.tsx` owns profile and settings state and writes through to Dexie (`commitProfile`). A `clear` session plus its before photo is created only when the first task of a photo is completed, so abandoned scans leave no records. Later completions update that same session through a promise chain in a ref, which keeps writes ordered. `catchUp` runs on load and on `visibilitychange`. `countToday` runs on task completion and on 「今日はサボる」. The logical day is always computed fresh with `logicalDay()` at action time, never cached across the 4:00 boundary.
 
 **Pins and photo aspect.** Task `x`/`y` are 0–1 relative to the whole photo, so the Tasks screen shows the photo at its real aspect ratio (no `object-fit: cover` cropping), using the width and height returned by `resizePhoto`. Pin centers are clamped inside the frame.
 
