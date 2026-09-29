@@ -51,9 +51,9 @@ functions/tsconfig.json    # separate tsconfig with Workers types; functions can
 
 **PWA caching.** Workbox precaches the app shell and caches Google Fonts. `/api/*` is excluded from the navigation fallback and is never cached; offline analysis falls back to the fixed tasks on the client.
 
-**Server boundary.** The function exists only to hide `ANTHROPIC_API_KEY` (a Pages Secret). `POST /api/analyze` takes `{ image: base64 JPEG, count: 1–5, voice: 'ふんわり'|'げんき' }` and returns `{ tasks, line }` or `{ error: 'too_large'|'ai_failed' }`. It uses `claude-haiku-4-5` with a single `report_tasks` tool, forced via `tool_choice` so the JSON shape is fixed. Limits: reject images over 1.5MB, `max_tokens` 800, 20s timeout. Never `console.log` images or request bodies. The full tool schema and system prompt rules are in the design doc.
+**Server boundary.** The function exists only to hide `ANTHROPIC_API_KEY` (a Pages Secret). `POST /api/analyze` takes `{ image: base64 JPEG, count: 1–10, voice: 'ふんわり'|'げんき' }` and returns `{ tasks, line }` or `{ error: 'too_large'|'ai_failed' }`. It uses `claude-haiku-4-5` with a single `report_tasks` tool, forced via `tool_choice` so the JSON shape is fixed. Limits: reject images over 1.5MB, `max_tokens` 1500, 20s timeout. Never `console.log` images or request bodies. The full tool schema and system prompt rules are in the design doc.
 
-**Client does all the game logic.** Re-validate the AI JSON on the client (count, text length, 0–1 coordinates), then assign task `id`s. The AI never decides EXP. On API failure or offline, fall back to 5 fixed tasks shown without pins.
+**Client does all the game logic.** Re-validate the AI JSON on the client (count, text length, 0–1 coordinates), then assign task `id`s. The AI never decides EXP. On API failure or offline, fall back to 10 fixed tasks shown without pins.
 
 **Images.** Resize to a 1024px long edge JPEG via Canvas (`createImageBitmap` → `toBlob`). Redrawing also strips EXIF location data. Only the before photo is analyzed; the after photo stays on the device for comparison.
 

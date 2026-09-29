@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { MAX_IMAGE_BYTES, type AnalyzeRequest, type AnalyzeResponse } from '../../shared/types';
+import { MAX_IMAGE_BYTES, MAX_TASKS, type AnalyzeRequest, type AnalyzeResponse } from '../../shared/types';
 
 // Claude API の中継だけをする。画像も本文もログやストレージに残さない（console.log 禁止）
 
@@ -25,7 +25,7 @@ const TOOL: Anthropic.Tool = {
       tasks: {
         type: 'array',
         minItems: 1,
-        maxItems: 5,
+        maxItems: MAX_TASKS,
         items: {
           type: 'object',
           properties: {
@@ -56,14 +56,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   // base64 は4文字で3バイト
   if (req.image.length * 0.75 > MAX_IMAGE_BYTES) return json({ error: 'too_large' }, 413);
 
-  const count = Math.min(5, Math.max(1, Math.round(Number(req.count) || 3)));
+  const count = Math.min(MAX_TASKS, Math.max(1, Math.round(Number(req.count) || 3)));
   const voice = req.voice === 'げんき' ? 'げんき' : 'ふんわり';
 
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, timeout: 20_000, maxRetries: 0 });
   try {
     const res = await client.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 800,
+      max_tokens: 1500,
       system: SYSTEM,
       tools: [TOOL],
       tool_choice: { type: 'tool', name: TOOL.name },

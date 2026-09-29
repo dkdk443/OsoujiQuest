@@ -5,7 +5,7 @@ import type { Profile, Session, Voice } from '../../shared/types';
 
 export type Settings = {
   restWeekdays: number[]; // 0=日 … 6=土
-  missionCount: number; // 1〜5
+  missionCount: number; // 1〜MAX_TASKS
   voice: Voice;
   photoKeepDays: 7 | 30 | null; // null = ずっと
 };

@@ -12,7 +12,7 @@ type Props = {
 
 // 表示は月曜はじまり。値は Date#getDay と同じ 0=日 … 6=土
 const WEEK = [['月', 1], ['火', 2], ['水', 3], ['木', 4], ['金', 5], ['土', 6], ['日', 0]] as const;
-const COUNTS = [1, 3, 5] as const;
+const COUNTS = [1, 3, 5, 10] as const;
 const VOICES: Voice[] = ['ふんわり', 'げんき'];
 const KEEPS = [[7, '7日'], [30, '30日'], [null, 'ずっと']] as const;
 

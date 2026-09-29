@@ -14,6 +14,11 @@ const FALLBACK: Omit<Task, 'id'>[] = [
   { text: '服を1枚たたむか、かける', min: 1, x: 0, y: 0 },
   { text: '机の上の物を1か所にまとめる', min: 2, x: 0, y: 0 },
   { text: 'コップや食器を1つ片づける', min: 1, x: 0, y: 0 },
+  { text: '本や雑誌を3冊重ねる', min: 1, x: 0, y: 0 },
+  { text: 'リモコンを定位置にもどす', min: 1, x: 0, y: 0 },
+  { text: '床の紙類を1か所にまとめる', min: 2, x: 0, y: 0 },
+  { text: '靴をそろえて並べる', min: 1, x: 0, y: 0 },
+  { text: 'クッションを整えて置く', min: 1, x: 0, y: 0 },
 ];
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));

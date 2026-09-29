@@ -30,10 +30,11 @@ export type Profile = {
 
 // POST /api/analyze
 export const MAX_IMAGE_BYTES = 1.5 * 1024 * 1024;
+export const MAX_TASKS = 10;
 
 export type AnalyzeRequest = {
   image: string; // base64 JPEG（data: プレフィックスなし）
-  count: number; // 1〜5
+  count: number; // 1〜MAX_TASKS
   voice: Voice;
 };
 
