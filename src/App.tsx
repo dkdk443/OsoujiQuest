@@ -288,6 +288,8 @@ export default function App() {
           index={tasks.indexOf(focusTask!) + 1}
           total={tasks.length}
           voice={settings.voice}
+          photoUrl={photoUrl!}
+          pinned={quest!.pinned}
           onFinish={finishFocus}
           onPass={pass}
           onQuit={() => setScreen('tasks')}

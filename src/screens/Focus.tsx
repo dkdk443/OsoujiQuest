@@ -8,6 +8,8 @@ type Props = {
   index: number; // 1始まり
   total: number;
   voice: Voice;
+  photoUrl: string;
+  pinned: boolean; // 予備タスクは位置が無いので写真全体を出す
   onFinish: () => void;
   onPass: () => void;
   onQuit: () => void;
@@ -16,7 +18,7 @@ type Props = {
 const LIMIT = 60;
 
 // 60秒リング。0秒になっても終わらせず「時間切れでもいいよ」と出すだけ
-export function Focus({ task, index, total, voice, onFinish, onPass, onQuit }: Props) {
+export function Focus({ task, index, total, voice, photoUrl, pinned, onFinish, onPass, onQuit }: Props) {
   // 画面が消灯しても正しく減るよう、開始時刻からの経過で数える
   const [startedAt] = useState(() => Date.now());
   const [now, setNow] = useState(startedAt);
@@ -29,7 +31,21 @@ export function Focus({ task, index, total, voice, onFinish, onPass, onQuit }: P
   const pct = Math.round((1 - sec / LIMIT) * 100);
 
   return (
-    <div className="screen" style={{ background: 'var(--bg-focus)' }}>
+    <div className="screen" style={{ background: 'var(--bg-focus)', isolation: 'isolate' }}>
+      {/* 背景は撮った写真。対象の物のあたりを少し寄せて見せ、上に背景色を重ねて文字を読めるようにする */}
+      <img
+        src={photoUrl}
+        alt=""
+        style={{
+          position: 'absolute', inset: 0, zIndex: -1, width: '100%', height: '100%', objectFit: 'cover',
+          ...(pinned && {
+            objectPosition: `${task.x * 100}% ${task.y * 100}%`,
+            transform: 'scale(1.4)',
+            transformOrigin: `${task.x * 100}% ${task.y * 100}%`,
+          }),
+        }}
+      />
+      <div style={{ position: 'absolute', inset: 0, zIndex: -1, background: 'color-mix(in oklch, var(--bg-focus) 62%, transparent)' }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button className="back" onClick={onQuit}>× やめる</button>
         <div style={{ font: '400 13px var(--font-dot)', color: 'var(--sub)' }}>タスク {index} / {total}</div>
@@ -53,7 +69,7 @@ export function Focus({ task, index, total, voice, onFinish, onPass, onQuit }: P
             <div style={{ fontSize: 11, color: 'var(--sub)' }}>{sec === 0 ? '時間切れでもいいよ' : 'ゆっくりでいい'}</div>
           </div>
         </div>
-        <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.5, textAlign: 'center', maxWidth: 320, textWrap: 'pretty' }}>{task.text}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.5, textAlign: 'center', maxWidth: 320, textWrap: 'pretty', textShadow: '0 1px 6px var(--bg)' }}>{task.text}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 56, height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Chiribo mood="side" size={50} />
