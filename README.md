@@ -5,6 +5,14 @@
 
 **デモ:** https://osoujiquest.pages.dev/ （スマホで開いて「ホーム画面に追加」するとアプリとして使えます）
 
+<p>
+  <img src="docs/screenshots/1-home.png" alt="ホーム" width="180">
+  <img src="docs/screenshots/3-scan.png" alt="スキャン中" width="180">
+  <img src="docs/screenshots/4-tasks.png" alt="チリボの指示書" width="180">
+  <img src="docs/screenshots/5-focus.png" alt="1分タイマー" width="180">
+  <img src="docs/screenshots/6-done.png" alt="クリア" width="180">
+</p>
+
 ## できること
 
 - **部屋をパシャる** — 撮った写真を Claude が見て、「ペットボトルを3本すてる」のような1〜2分のミッションを最大10個出す。写真の上に番号ピンで場所を示す
