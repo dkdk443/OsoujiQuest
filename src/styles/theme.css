@@ -59,7 +59,15 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   overflow: hidden;
 }
 
-.title { font-family: var(--font-dot); font-size: 18px; white-space: nowrap; }
+.title {
+  font-family: var(--font-dot);
+  font-size: 22px;
+  white-space: nowrap;
+  letter-spacing: .04em;
+  /* DotGothic16 は 400 のみ。擬似ボールドでドットが潰れないよう、1px の同色影で太らせてピンクの影でドット感を出す */
+  font-synthesis: none;
+  text-shadow: 1px 0 0 currentColor, 2px 2px 0 var(--pink), 3px 2px 0 var(--pink);
+}
 
 .chip {
   padding: 5px 9px;
