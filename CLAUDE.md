@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-All 5 of the design doc's 作業ステップ are implemented: Home → Camera → Scan → Tasks → Focus (1-minute timer) → Done → after photo → Compare, plus History, Settings, JSON export, photo expiry, streaks, Dexie persistence, `/api/analyze`, and PWA. Cloudflare Pages deploy and Access are not set up yet.
+All 5 of the design doc's 作業ステップ are implemented: Home → Camera → Scan → Tasks → Focus (1-minute timer) → Done → after photo → Compare → Review (チリボのしんだん), plus History, Settings, JSON export, photo expiry, streaks, Dexie persistence, `/api/analyze`, `/api/review`, and PWA. Cloudflare Pages deploy and Access are not set up yet.
 
 - `おそうじクエスト 最小構成 設計書（個人検証用）.md`: the design doc. It is the source of truth for scope, stack, data model, API contract and game rules. Read it before implementing anything.
 - `おそうじクエスト.html`: the original prototype (~8MB self-unpacking bundle). Don't read it directly. The screen markup and the logic class are in the gzip+base64 `__bundler/template` and `__bundler/manifest` script blocks. Decode them to a scratch file and strip the `@font-face` and data-URI noise before reading. Screen layouts (padding, borders, shadows, font sizes) should match the prototype's inline styles.
@@ -27,10 +27,11 @@ TypeScript, React 18 + Vite, vite-plugin-pwa, Dexie (IndexedDB), plain CSS with 
 ## Architecture
 
 ```
-functions/api/analyze.ts   # only server code: proxies to Claude, stores nothing
+functions/api/analyze.ts   # server code: proxies to Claude, stores nothing
+functions/api/review.ts    # same, for the before/after review
 shared/types.ts            # Task, Session, etc., shared by frontend and function
 src/App.tsx                # no router; a `screen` state switches screens (same as prototype)
-src/screens/               # Home, Camera, Scan, Tasks, Focus, Done, Compare, History, Settings
+src/screens/               # Home, Camera, Scan, Tasks, Focus, Done, Compare, Review, History, Settings
 src/components/Chiribo.tsx # mascot, ported from prototype bot()
 src/lib/db.ts              # Dexie schema
 src/lib/game.ts            # EXP, level, streak, logical day
@@ -38,6 +39,7 @@ src/lib/image.ts           # resize + base64
 src/styles/theme.css       # 「よる」 palette
 src/lib/lines.ts           # チリボ dialogue [ふんわり, げんき], ported from prototype L()
 src/lib/tasks.ts           # calls /api/analyze, re-validates AI output, fallback tasks
+src/lib/review.ts          # 3×3 clutter grid on device, calls /api/review, merges AI text
 functions/tsconfig.json    # separate tsconfig with Workers types; functions can't use DOM types
 ```
 
@@ -47,7 +49,7 @@ functions/tsconfig.json    # separate tsconfig with Workers types; functions can
 
 **Theming.** All colors are CSS variables in `theme.css` (`--bg`, `--paper`, `--ink`, `--pink`, `--mint`, `--lav`, `--butter`, …). `Chiribo` and the screens reference `var(--…)` rather than a palette object, so switching palettes later only means swapping variables. Text on colored buttons uses `--on-color`, which stays dark in every palette.
 
-**Photos.** Before and after photos both go into `photos` via `addPhoto`. The after photo is not analyzed; it's saved and linked to the current session as `afterPhotoId`, and retaking it deletes the previous one. `purgeOldPhotos` runs on load, on `visibilitychange` and when returning home.
+**Photos.** Before and after photos both go into `photos` via `addPhoto`. The after photo is saved and linked to the current session as `afterPhotoId`, and retaking it deletes the previous one. `purgeOldPhotos` runs on load, on `visibilitychange` and when returning home.
 
 **PWA caching.** Workbox precaches the app shell and caches Google Fonts. `/api/*` is excluded from the navigation fallback and is never cached; offline analysis falls back to the fixed tasks on the client.
 
@@ -55,7 +57,9 @@ functions/tsconfig.json    # separate tsconfig with Workers types; functions can
 
 **Client does all the game logic.** Re-validate the AI JSON on the client (count, text length, 0–1 coordinates), then assign task `id`s. The AI never decides EXP. On API failure or offline, fall back to 10 fixed tasks shown without pins.
 
-**Images.** Resize to a 1024px long edge JPEG via Canvas (`createImageBitmap` → `toBlob`). Redrawing also strips EXIF location data. Only the before photo is analyzed; the after photo stays on the device for comparison.
+**Images.** Resize to a 1024px long edge JPEG via Canvas (`createImageBitmap` → `toBlob`). Redrawing also strips EXIF location data. The before photo is analyzed by `/api/analyze`. Both photos are sent (shrunk to a 640px long edge) to `/api/review` only when the user opens チリボのしんだん, and are never stored server-side.
+
+**Review (チリボのしんだん).** Opened from Compare. The client splits both photos into a 3×3 grid and compares edge density per cell: this decides which cells get praise and advice pins. There is no score: the review only praises, and the prompt forbids numeric ratings. `/api/review` (same model, a forced `report_review` tool, `max_tokens` 800) only writes the text; the client re-validates it (cell 0–8, text lengths) and falls back to the on-device text when it fails. Advice can be added as a new 1-minute task pinned at the cell center.
 
 **Data (IndexedDB only, nothing server-side).** There are 4 stores: `profile` and `settings` (single row with key `'me'`), `sessions` (indexed by `day`) and `photos` (indexed by `createdAt`). Photos are kept apart from sessions so they can expire (7d/30d/forever) while the session records remain. On expiry, delete the photo and clear the session's photo reference. Backup is manual JSON export without photos. Call `navigator.storage.persist()` on startup.
 

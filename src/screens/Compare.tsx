@@ -9,11 +9,11 @@ type Props = {
   doneCount: number;
   voice: Voice;
   onHome: () => void;
-  onHistory: () => void;
+  onReview: () => void;
 };
 
 // 2枚を重ね、上のアフターを clip-path: inset() で左から削ってスライダーで動かす
-export function Compare({ beforeUrl, afterUrl, doneCount, voice, onHome, onHistory }: Props) {
+export function Compare({ beforeUrl, afterUrl, doneCount, voice, onHome, onReview }: Props) {
   const [cmp, setCmp] = useState(50);
   const label = { position: 'absolute' as const, top: 10, padding: '2px 8px', borderRadius: 3, font: '400 12px var(--font-dot)' };
 
@@ -54,8 +54,8 @@ export function Compare({ beforeUrl, afterUrl, doneCount, voice, onHome, onHisto
         </div>
       </div>
 
-      <button className="btn btn-primary" style={{ height: 58, flex: 'none', fontSize: 19 }} onClick={onHistory}>
-        きろくを見る
+      <button className="btn btn-primary" style={{ height: 58, flex: 'none', fontSize: 19 }} onClick={onReview}>
+        チリボに見てもらう
       </button>
     </div>
   );

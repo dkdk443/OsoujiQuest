@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Profile, Task } from '../shared/types';
+import type { Profile, Session, Task } from '../shared/types';
 import { TabBar } from './components/TabBar';
 import {
   addPhoto, db, DEFAULT_PROFILE, DEFAULT_SETTINGS, exportData, loadProfile, loadSettings, purgeOldPhotos, saveProfile, saveSettings,
@@ -7,6 +7,7 @@ import {
 } from './lib/db';
 import { catchUp, countToday, gainXp, logicalDay, xpFor } from './lib/game';
 import { resizePhoto, type Photo } from './lib/image';
+import { cellCenter, reviewPhotos, type Review as ReviewData } from './lib/review';
 import { analyzePhoto, type Quest } from './lib/tasks';
 import { Camera } from './screens/Camera';
 import { Compare } from './screens/Compare';
@@ -14,12 +15,13 @@ import { Done } from './screens/Done';
 import { Focus } from './screens/Focus';
 import { History } from './screens/History';
 import { Home } from './screens/Home';
+import { Review } from './screens/Review';
 import { Scan } from './screens/Scan';
 import { Settings as SettingsScreen } from './screens/Settings';
 import { Tasks } from './screens/Tasks';
 
 // ルーターは使わず、プロトタイプと同じく screen 状態で画面を切り替える
-type Screen = 'home' | 'cam' | 'scan' | 'tasks' | 'focus' | 'done' | 'compare' | 'history' | 'settings';
+type Screen = 'home' | 'cam' | 'scan' | 'tasks' | 'focus' | 'done' | 'compare' | 'review' | 'history' | 'settings';
 
 const logError = (what: string) => (err: unknown) => console.error(what, err);
 
@@ -35,6 +37,7 @@ export default function App() {
 
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [after, setAfter] = useState<Photo | null>(null);
   const [afterUrl, setAfterUrl] = useState<string | null>(null);
   const afterPhotoId = useRef<number | null>(null);
   const [quest, setQuest] = useState<Quest | null>(null);
@@ -42,6 +45,10 @@ export default function App() {
   const [showAll, setShowAll] = useState(false);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [lastGain, setLastGain] = useState({ gained: 0, leveled: false });
+  const [review, setReview] = useState<ReviewData | null>(null);
+  const [addedAdvice, setAddedAdvice] = useState<string[]>([]);
+  // 写真を撮り直したあとに古いしんだんの結果が届いても捨てる
+  const reviewRun = useRef(0);
   // 今の写真のセッション。最初の1個を完了したときに写真と一緒に保存し、以降は更新する
   const sessionId = useRef<Promise<number> | null>(null);
 
@@ -104,7 +111,9 @@ export default function App() {
     setPhotoUrl(URL.createObjectURL(p.blob));
     setQuest(null);
     setDoneIds([]);
+    setAfter(null);
     setAfterUrl(null);
+    resetReview();
     sessionId.current = null;
     afterPhotoId.current = null;
     setScreen('scan');
@@ -120,7 +129,9 @@ export default function App() {
       alert('写真を読みこめなかったよ。もう一回撮ってみて');
       return;
     }
+    setAfter(p);
     setAfterUrl(URL.createObjectURL(p.blob));
+    resetReview();
     setScreen('compare');
     const prev = afterPhotoId.current;
     const id = await addPhoto(p.blob);
@@ -128,6 +139,33 @@ export default function App() {
     // 撮り直したら前のアフター写真は消す
     if (prev !== null) db.photos.delete(prev).catch(logError('delete old after failed'));
     sessionId.current?.then(sid => db.sessions.update(sid, { afterPhotoId: id })).catch(logError('save after failed'));
+  };
+
+  const resetReview = () => {
+    reviewRun.current++;
+    setReview(null);
+    setAddedAdvice([]);
+  };
+
+  // しんだんは1枚のアフター写真につき1回。くらべる画面にもどって開き直しても結果を使い回す
+  const openReview = () => {
+    setScreen('review');
+    if (review) return;
+    const run = ++reviewRun.current;
+    const done = tasks.filter(t => doneIds.includes(t.id)).map(t => t.text);
+    const todo = tasks.filter(t => !doneIds.includes(t.id)).map(t => t.text);
+    reviewPhotos(photo!.blob, after!.blob, done, todo, settings.voice)
+      .then(r => { if (reviewRun.current === run) setReview(r); })
+      .catch(logError('review failed'));
+  };
+
+  // アドバイスをミッションに足す。ピンはそのマスの中心に出す
+  const addAdvice = (a: ReviewData['advice'][number]) => {
+    if (!quest || addedAdvice.includes(a.text)) return;
+    const next = [...quest.tasks, { id: `r${quest.tasks.length + 1}`, text: a.text, min: 1 as const, ...cellCenter(a.cell) }];
+    setQuest({ ...quest, tasks: next });
+    setAddedAdvice(v => [...v, a.text]);
+    updateSession({ tasks: next });
   };
 
   const openCam = (mode: 'before' | 'after') => {
@@ -183,12 +221,19 @@ export default function App() {
         return db.sessions.add({ day, kind: 'clear', tasks, doneIds: done, gainedXp, beforePhotoId });
       })();
     } else {
-      sessionId.current = sessionId.current.then(async id => {
-        await db.sessions.update(id, { doneIds: done, gainedXp });
-        return id;
-      });
+      updateSession({ doneIds: done, gainedXp });
     }
     sessionId.current.catch(logError('save session failed'));
+  };
+
+  // 保存ずみのセッションを、前の書きこみが終わってから順に更新する
+  const updateSession = (changes: Partial<Session>) => {
+    if (!sessionId.current) return;
+    sessionId.current = sessionId.current.then(async id => {
+      await db.sessions.update(id, changes);
+      return id;
+    });
+    sessionId.current.catch(logError('update session failed'));
   };
 
   const finishFocus = () => {
@@ -318,6 +363,19 @@ export default function App() {
           doneCount={doneIds.length}
           voice={settings.voice}
           onHome={goHome}
+          onReview={openReview}
+        />
+      );
+    case 'review':
+      return (
+        <Review
+          review={review}
+          after={after!}
+          afterUrl={afterUrl!}
+          added={addedAdvice}
+          onAdd={addAdvice}
+          onPlay={toTasks}
+          onBack={() => setScreen('compare')}
           onHistory={() => setScreen('history')}
         />
       );
