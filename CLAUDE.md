@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Steps 1 (土台) and 2 (撮影と解析) of the design doc's 作業ステップ are implemented: Home → Camera → Scan → Tasks, plus `/api/analyze`. State is in memory only; Dexie comes in step 4. Tapping a task is a placeholder until step 3. Cloudflare Pages deploy and Access are not set up yet.
+Steps 1–3 of the design doc's 作業ステップ are implemented: Home → Camera → Scan → Tasks → Focus (1-minute timer) → Done, plus `/api/analyze` and EXP/levels. State is in memory only; Dexie, streaks and History come in step 4. The Done screen has no 「アフターを撮って比べる」 button yet (step 5). Cloudflare Pages deploy and Access are not set up yet.
 
 - `おそうじクエスト 最小構成 設計書（個人検証用）.md`: the design doc. It is the source of truth for scope, stack, data model, API contract and game rules. Read it before implementing anything.
 - `おそうじクエスト.html`: the original prototype (~8MB self-unpacking bundle). Don't read it directly. The screen markup and the logic class are in the gzip+base64 `__bundler/template` and `__bundler/manifest` script blocks. Decode them to a scratch file and strip the `@font-face` and data-URI noise before reading. Screen layouts (padding, borders, shadows, font sizes) should match the prototype's inline styles.

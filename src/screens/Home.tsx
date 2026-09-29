@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Profile, Voice } from '../../shared/types';
 import { Chiribo } from '../components/Chiribo';
+import { XpBar } from '../components/XpBar';
 import { line } from '../lib/lines';
 
 type Props = {
@@ -26,12 +27,8 @@ export function Home({ profile, voice, restToday, oneMode, onToggleOneMode, onSh
         </div>
       </div>
 
-      <div className="xpbar" style={{ marginTop: 14 }}>
-        <div>EXP</div>
-        <div className="xpbar-track">
-          <div className="xpbar-fill" style={{ width: `${profile.xp}%` }} />
-        </div>
-        <div>{profile.xp}/100</div>
+      <div style={{ marginTop: 14 }}>
+        <XpBar label="EXP" xp={profile.xp} />
       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, padding: '24px 0' }}>

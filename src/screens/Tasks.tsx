@@ -1,5 +1,6 @@
 import type { Task, Voice } from '../../shared/types';
 import { Chiribo } from '../components/Chiribo';
+import { xpFor } from '../lib/game';
 import type { Photo } from '../lib/image';
 import { line } from '../lib/lines';
 import type { Quest } from '../lib/tasks';
@@ -17,7 +18,6 @@ type Props = {
 };
 
 const PHOTO_H = 240;
-const xpOf = (t: Task) => (t.min === 2 ? 15 : 10);
 
 export function Tasks({ quest, photo, photoUrl, voice, doneIds, showAll, onShowAll, onStart, onHome }: Props) {
   const { tasks } = quest;
@@ -114,7 +114,7 @@ export function Tasks({ quest, photo, photoUrl, voice, doneIds, showAll, onShowA
               </div>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <div style={{ fontSize: 15, lineHeight: 1.4, textDecoration: d ? 'line-through' : 'none' }}>{t.text}</div>
-                <div style={{ font: '400 12px var(--font-dot)', color: 'var(--sub)' }}>{t.min}分 ・ +{xpOf(t)}EXP</div>
+                <div style={{ font: '400 12px var(--font-dot)', color: 'var(--sub)' }}>{t.min}分 ・ +{xpFor(t)}EXP</div>
               </div>
               <div style={{ font: '400 16px var(--font-dot)' }}>{d ? '' : '▶'}</div>
             </button>
