@@ -48,3 +48,36 @@ export async function loadSettings(): Promise<Settings> {
 }
 
 export const saveProfile = (p: Profile) => db.profile.put({ ...p, key: 'me' });
+
+export const saveSettings = (s: Settings) => db.settings.put({ ...s, key: 'me' });
+
+export const addPhoto = (blob: Blob) => db.photos.add({ blob, createdAt: Date.now() });
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// 保存期間を過ぎた写真を消し、sessions からの参照も外す。記録（何個片づけたか）は残る
+export async function purgeOldPhotos(keepDays: Settings['photoKeepDays'], now = Date.now()): Promise<number> {
+  if (keepDays === null) return 0;
+  const cutoff = now - keepDays * DAY_MS;
+  return db.transaction('rw', db.photos, db.sessions, async () => {
+    const ids = (await db.photos.where('createdAt').below(cutoff).primaryKeys()) as number[];
+    if (ids.length === 0) return 0;
+    await db.sessions.filter(s => ids.includes(s.beforePhotoId ?? -1)).modify(s => { delete s.beforePhotoId; });
+    await db.sessions.filter(s => ids.includes(s.afterPhotoId ?? -1)).modify(s => { delete s.afterPhotoId; });
+    await db.photos.bulkDelete(ids);
+    return ids.length;
+  });
+}
+
+// 手動バックアップ用。写真は含めない
+export async function exportData() {
+  const [profile, settings, sessions] = await Promise.all([loadProfile(), loadSettings(), db.sessions.orderBy('day').toArray()]);
+  return {
+    app: 'osouji-quest',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    profile,
+    settings,
+    sessions: sessions.map(({ beforePhotoId: _b, afterPhotoId: _a, ...s }) => s),
+  };
+}

@@ -11,6 +11,7 @@ type Props = {
   restWeekdays: number[];
   today: string;
   voice: Voice;
+  onSettings: () => void;
 };
 
 type Row = Session & { id: number; thumb: string | null };
@@ -20,7 +21,7 @@ const LIST_LIMIT = 30;
 
 const md = (day: string) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`;
 
-export function History({ profile, restWeekdays, today, voice }: Props) {
+export function History({ profile, restWeekdays, today, voice, onSettings }: Props) {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [calendarDays, setCalendarDays] = useState<Map<string, 'clear' | 'rest'>>(new Map());
   // おやすみ曜日は、使いはじめた日より前には塗らない
@@ -77,7 +78,16 @@ export function History({ profile, restWeekdays, today, voice }: Props) {
 
   return (
     <div className="screen" style={{ gap: 18, backgroundImage: 'none', paddingBottom: TAB_SPACE }}>
-      <div style={{ fontFamily: 'var(--font-dot)', fontSize: 26 }}>きろく</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontFamily: 'var(--font-dot)', fontSize: 26 }}>きろく</div>
+        <button
+          className="btn"
+          style={{ height: 40, padding: '0 12px', borderRadius: 8, boxShadow: '2px 2px 0 var(--ink)', font: '400 13px var(--font-dot)' }}
+          onClick={onSettings}
+        >
+          せってい
+        </button>
+      </div>
 
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={card('var(--butter)')}>

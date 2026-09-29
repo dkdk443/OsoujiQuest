@@ -3,6 +3,7 @@ import { Chiribo } from '../components/Chiribo';
 import { line } from '../lib/lines';
 
 type Props = {
+  mode: 'before' | 'after';
   voice: Voice;
   onPick: (file: File) => void;
   onCancel: () => void;
@@ -18,8 +19,8 @@ const corner = (v: 'top' | 'bottom', h: 'left' | 'right') => ({
   [`border${h === 'left' ? 'Left' : 'Right'}`]: '5px solid #fffdf7',
 });
 
-// 標準カメラを file input で起動する。ストリームは扱わない
-export function Camera({ voice, onPick, onCancel }: Props) {
+// 標準カメラを file input で起動する。ストリームは扱わない。ビフォー/アフター共通
+export function Camera({ mode, voice, onPick, onCancel }: Props) {
   return (
     <div className="screen" style={{ background: 'var(--stripe)', padding: 0 }}>
       <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top) + 110px)', left: 28, right: 28, bottom: 200, pointerEvents: 'none' }}>
@@ -37,7 +38,7 @@ export function Camera({ voice, onPick, onCancel }: Props) {
           <Chiribo size={50} />
         </div>
         <div style={{ padding: '9px 12px', border: '2.5px solid var(--ink)', borderRadius: 8, background: 'var(--paper)', fontSize: 13, lineHeight: 1.5 }}>
-          {line('cam', voice)}
+          {line(mode === 'after' ? 'after' : 'cam', voice)}
         </div>
       </div>
 
@@ -69,7 +70,7 @@ export function Camera({ voice, onPick, onCancel }: Props) {
             }}
           />
         </label>
-        <div style={{ width: 76, textAlign: 'right', font: '400 13px var(--font-dot)', color: '#fffdf7' }}>BEFORE</div>
+        <div style={{ width: 76, textAlign: 'right', font: '400 13px var(--font-dot)', color: '#fffdf7' }}>{mode === 'after' ? 'AFTER' : 'BEFORE'}</div>
       </div>
     </div>
   );

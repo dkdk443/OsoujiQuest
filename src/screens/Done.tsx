@@ -9,12 +9,12 @@ type Props = {
   leveled: boolean;
   hasNext: boolean;
   voice: Voice;
+  onAfter: () => void;
   onOneMore: () => void;
   onHome: () => void;
 };
 
-// ステップ5で「アフターを撮って比べる」を足す
-export function Done({ profile, gained, leveled, hasNext, voice, onOneMore, onHome }: Props) {
+export function Done({ profile, gained, leveled, hasNext, voice, onAfter, onOneMore, onHome }: Props) {
   return (
     <div className="screen" style={{ backgroundColor: 'var(--bg-done)' }}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, padding: '20px 0' }}>
@@ -39,13 +39,16 @@ export function Done({ profile, gained, leveled, hasNext, voice, onOneMore, onHo
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 10 }}>
-        {hasNext && (
-          <button className="btn btn-primary" style={{ flex: 1, height: 58, fontSize: 19 }} onClick={onOneMore}>
-            もう1個だけ
-          </button>
-        )}
-        <button className="btn" style={{ flex: 1, height: 58 }} onClick={onHome}>今日はここまで</button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <button className="btn btn-primary" style={{ height: 58, fontSize: 19 }} onClick={onAfter}>
+          アフターを撮って比べる
+        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {hasNext && (
+            <button className="btn" style={{ flex: 1, height: 50 }} onClick={onOneMore}>もう1個だけ</button>
+          )}
+          <button className="btn" style={{ flex: 1, height: 50 }} onClick={onHome}>今日はここまで</button>
+        </div>
       </div>
     </div>
   );

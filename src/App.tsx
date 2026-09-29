@@ -1,21 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Profile, Task } from '../shared/types';
 import { TabBar } from './components/TabBar';
-import { db, DEFAULT_PROFILE, DEFAULT_SETTINGS, loadProfile, loadSettings, saveProfile, type Settings } from './lib/db';
+import {
+  addPhoto, db, DEFAULT_PROFILE, DEFAULT_SETTINGS, exportData, loadProfile, loadSettings, purgeOldPhotos, saveProfile, saveSettings,
+  type Settings,
+} from './lib/db';
 import { catchUp, countToday, gainXp, logicalDay, xpFor } from './lib/game';
 import { resizePhoto, type Photo } from './lib/image';
 import { analyzePhoto, type Quest } from './lib/tasks';
 import { Camera } from './screens/Camera';
+import { Compare } from './screens/Compare';
 import { Done } from './screens/Done';
 import { Focus } from './screens/Focus';
 import { History } from './screens/History';
 import { Home } from './screens/Home';
 import { Scan } from './screens/Scan';
+import { Settings as SettingsScreen } from './screens/Settings';
 import { Tasks } from './screens/Tasks';
 
-// ルーターは使わず、プロトタイプと同じく screen 状態で画面を切り替える。
-// ステップ5で 'compare' | 'settings' を足す
-type Screen = 'home' | 'cam' | 'scan' | 'tasks' | 'focus' | 'done' | 'history';
+// ルーターは使わず、プロトタイプと同じく screen 状態で画面を切り替える
+type Screen = 'home' | 'cam' | 'scan' | 'tasks' | 'focus' | 'done' | 'compare' | 'history' | 'settings';
 
 const logError = (what: string) => (err: unknown) => console.error(what, err);
 
@@ -27,9 +31,12 @@ export default function App() {
   const [today, setToday] = useState(() => logicalDay());
   const [restToday, setRestToday] = useState(false);
   const [oneMode, setOneMode] = useState(true);
+  const [camMode, setCamMode] = useState<'before' | 'after'>('before');
 
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [afterUrl, setAfterUrl] = useState<string | null>(null);
+  const afterPhotoId = useRef<number | null>(null);
   const [quest, setQuest] = useState<Quest | null>(null);
   const [doneIds, setDoneIds] = useState<string[]>([]);
   const [showAll, setShowAll] = useState(false);
@@ -54,6 +61,7 @@ export default function App() {
     const rests = await db.sessions.where('day').equals(d).filter(x => x.kind === 'rest').count();
     setRestToday(rests > 0);
     setToday(d);
+    await purgeOldPhotos(s.photoKeepDays);
   }, [commitProfile]);
 
   useEffect(() => {
@@ -81,8 +89,10 @@ export default function App() {
 
   // 写真を差し替えたら古い object URL を解放する
   useEffect(() => () => { if (photoUrl) URL.revokeObjectURL(photoUrl); }, [photoUrl]);
+  useEffect(() => () => { if (afterUrl) URL.revokeObjectURL(afterUrl); }, [afterUrl]);
 
   const onPick = async (file: File) => {
+    if (camMode === 'after') return onPickAfter(file);
     let p: Photo;
     try {
       p = await resizePhoto(file);
@@ -94,9 +104,55 @@ export default function App() {
     setPhotoUrl(URL.createObjectURL(p.blob));
     setQuest(null);
     setDoneIds([]);
+    setAfterUrl(null);
     sessionId.current = null;
+    afterPhotoId.current = null;
     setScreen('scan');
     setQuest(await analyzePhoto(p.blob, settings.missionCount, settings.voice));
+  };
+
+  // アフター写真は解析せず、端末に保存して比較にだけ使う
+  const onPickAfter = async (file: File) => {
+    let p: Photo;
+    try {
+      p = await resizePhoto(file);
+    } catch {
+      alert('写真を読みこめなかったよ。もう一回撮ってみて');
+      return;
+    }
+    setAfterUrl(URL.createObjectURL(p.blob));
+    setScreen('compare');
+    const prev = afterPhotoId.current;
+    const id = await addPhoto(p.blob);
+    afterPhotoId.current = id;
+    // 撮り直したら前のアフター写真は消す
+    if (prev !== null) db.photos.delete(prev).catch(logError('delete old after failed'));
+    sessionId.current?.then(sid => db.sessions.update(sid, { afterPhotoId: id })).catch(logError('save after failed'));
+  };
+
+  const openCam = (mode: 'before' | 'after') => {
+    setCamMode(mode);
+    setScreen('cam');
+  };
+
+  const goHome = () => {
+    setScreen('home');
+    purgeOldPhotos(settings.photoKeepDays).catch(logError('purge failed'));
+  };
+
+  const changeSettings = (s: Settings) => {
+    setSettings(s);
+    saveSettings(s).catch(logError('save settings failed'));
+  };
+
+  const download = async () => {
+    const data = await exportData();
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `osouji-quest-${logicalDay()}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const toTasks = useCallback(() => {
@@ -123,7 +179,7 @@ export default function App() {
     if (!sessionId.current) {
       const blob = photo!.blob;
       sessionId.current = (async () => {
-        const beforePhotoId = await db.photos.add({ blob, createdAt: Date.now() });
+        const beforePhotoId = await addPhoto(blob);
         return db.sessions.add({ day, kind: 'clear', tasks, doneIds: done, gainedXp, beforePhotoId });
       })();
     } else {
@@ -166,7 +222,7 @@ export default function App() {
   if (!ready) return null;
 
   const tabBar = (current: 'home' | 'history') => (
-    <TabBar current={current} onHome={() => setScreen('home')} onShoot={() => setScreen('cam')} onHistory={() => setScreen('history')} />
+    <TabBar current={current} onHome={goHome} onShoot={() => openCam('before')} onHistory={() => setScreen('history')} />
   );
 
   switch (screen) {
@@ -180,7 +236,7 @@ export default function App() {
             canSkip={profile.lastCountedDay !== today}
             oneMode={oneMode}
             onToggleOneMode={() => setOneMode(v => !v)}
-            onShoot={() => setScreen('cam')}
+            onShoot={() => openCam('before')}
             onRest={rest}
           />
           {tabBar('home')}
@@ -189,12 +245,25 @@ export default function App() {
     case 'history':
       return (
         <>
-          <History profile={profile} restWeekdays={settings.restWeekdays} today={today} voice={settings.voice} />
+          <History
+            profile={profile}
+            restWeekdays={settings.restWeekdays}
+            today={today}
+            voice={settings.voice}
+            onSettings={() => setScreen('settings')}
+          />
           {tabBar('history')}
         </>
       );
     case 'cam':
-      return <Camera voice={settings.voice} onPick={onPick} onCancel={() => setScreen('home')} />;
+      return (
+        <Camera
+          mode={camMode}
+          voice={settings.voice}
+          onPick={onPick}
+          onCancel={() => (camMode === 'after' ? setScreen('done') : goHome())}
+        />
+      );
     case 'scan':
       return <Scan photoUrl={photoUrl!} done={quest !== null} onFinish={toTasks} />;
     case 'tasks':
@@ -208,7 +277,7 @@ export default function App() {
           showAll={showAll}
           onShowAll={setShowAll}
           onStart={startFocus}
-          onHome={() => setScreen('home')}
+          onHome={goHome}
         />
       );
     case 'focus':
@@ -233,10 +302,24 @@ export default function App() {
           leveled={lastGain.leveled}
           hasNext={!!n}
           voice={settings.voice}
+          onAfter={() => openCam('after')}
           onOneMore={() => n && startFocus(n)}
-          onHome={() => setScreen('home')}
+          onHome={goHome}
         />
       );
     }
+    case 'compare':
+      return (
+        <Compare
+          beforeUrl={photoUrl!}
+          afterUrl={afterUrl!}
+          doneCount={doneIds.length}
+          voice={settings.voice}
+          onHome={goHome}
+          onHistory={() => setScreen('history')}
+        />
+      );
+    case 'settings':
+      return <SettingsScreen settings={settings} onChange={changeSettings} onExport={download} onBack={() => setScreen('history')} />;
   }
 }
