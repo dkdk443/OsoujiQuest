@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-All 5 of the design doc's 作業ステップ are implemented: Home → Camera → Scan → Tasks → Focus (1-minute timer) → Done → after photo → Compare → Review (チリボのしんだん), plus History, Settings, JSON export, photo expiry, streaks, Dexie persistence, `/api/analyze`, `/api/review`, and PWA. Cloudflare Pages deploy and Access are not set up yet.
+All 5 of the design doc's 作業ステップ are implemented: Home → Camera → Scan → Tasks → Focus (1-minute timer) → Done → after photo → Compare → Review (チリボのしんだん), plus History, Settings, JSON export, photo expiry, streaks, Dexie persistence, `/api/analyze`, `/api/review`, and PWA. Deployed on Cloudflare Pages at https://osoujiquest.pages.dev/ (Git integration: every push to `main` deploys). It is public on purpose, as a portfolio piece: there is no Cloudflare Access, and the API key's small prepaid credit is the only spending cap.
 
 - `おそうじクエスト 最小構成 設計書（個人検証用）.md`: the design doc. It is the source of truth for scope, stack, data model, API contract and game rules. Read it before implementing anything.
 - `おそうじクエスト.html`: the original prototype (~8MB self-unpacking bundle). Don't read it directly. The screen markup and the logic class are in the gzip+base64 `__bundler/template` and `__bundler/manifest` script blocks. Decode them to a scratch file and strip the `@font-face` and data-URI noise before reading. Screen layouts (padding, borders, shadows, font sizes) should match the prototype's inline styles.
@@ -13,7 +13,7 @@ The app is a personal-use PWA: photograph a room → Claude suggests 1-minute cl
 
 ## Stack and commands
 
-TypeScript, React 18 + Vite, vite-plugin-pwa, Dexie (IndexedDB), plain CSS with CSS variables, deployed on Cloudflare Pages with one Pages Function. Cloudflare Access restricts the whole site to the owner's email.
+TypeScript, React 18 + Vite, vite-plugin-pwa, Dexie (IndexedDB), plain CSS with CSS variables, deployed on Cloudflare Pages with Pages Functions. `ANTHROPIC_API_KEY` is a Pages project Secret (Settings → Variables and Secrets, not the account Secrets Store); a new secret only takes effect after a redeploy.
 
 - Frontend dev server: `npm run dev` (Vite, port 5173). It proxies `/api/*` to port 8788
 - Functions dev server: `npm run dev:api` (`wrangler pages dev`, port 8788). It reads `ANTHROPIC_API_KEY` from `.dev.vars` (copy `.dev.vars.example`). Without a key, `/api/analyze` returns `ai_failed` and the app falls back to the fixed tasks. The design doc's `wrangler pages dev -- npm run dev` proxy form is deprecated, so don't use it
