@@ -17,7 +17,8 @@ type Props = {
   onHome: () => void;
 };
 
-const PHOTO_H = 240;
+// 写真の高さの上限。ピンが多くても見分けられるよう画面の高さに合わせて大きく出す（画面はスクロールする）
+const PHOTO_H = '62svh';
 
 export function Tasks({ quest, photo, photoUrl, voice, doneIds, showAll, onShowAll, onStart, onHome }: Props) {
   const { tasks } = quest;
@@ -39,7 +40,7 @@ export function Tasks({ quest, photo, photoUrl, voice, doneIds, showAll, onShowA
       {/* ピンの x・y は写真全体に対する 0〜1 なので、切り抜かずに縦横比のまま表示する */}
       <div
         className="photo"
-        style={{ alignSelf: 'center', width: `min(100%, ${(PHOTO_H * photo.width) / photo.height}px)`, aspectRatio: `${photo.width} / ${photo.height}` }}
+        style={{ alignSelf: 'center', width: `min(100%, calc(${PHOTO_H} * ${photo.width / photo.height}))`, aspectRatio: `${photo.width} / ${photo.height}` }}
       >
         <img src={photoUrl} alt="撮影した部屋" />
         {quest.pinned && shown.map(t => (
