@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Profile, Session, Voice } from '../../shared/types';
+import { MAX_TASKS, type Profile, type Session, type Voice } from '../../shared/types';
 
 // すべて端末の IndexedDB に保存し、サーバーには何も残さない
 
@@ -31,7 +31,7 @@ db.version(1).stores({
 });
 
 export const DEFAULT_PROFILE: Profile = { xp: 0, level: 1, streak: 0, lastCountedDay: null };
-export const DEFAULT_SETTINGS: Settings = { restWeekdays: [6], missionCount: 5, voice: 'ふんわり', photoKeepDays: 30 };
+export const DEFAULT_SETTINGS: Settings = { restWeekdays: [6], missionCount: MAX_TASKS, voice: 'ふんわり', photoKeepDays: 30 };
 
 export async function loadProfile(): Promise<Profile> {
   const row = await db.profile.get('me');
